@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#11150f">
+<meta name="apple-mobile-web-app-title" content="Steady">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Steady</title>
+<style>
+  :root{
+    --bg:#11150f; --panel:#1b2118; --panel-2:#222a1e; --line:#2f3a28;
+    --ink:#eef2e6; --ink-dim:#9aa68c; --ink-faint:#6f7a63;
+    --moss:#9fc24f; --moss-deep:#6f8f33; --clay:#d98a55; --sky:#7fb0c4;
+    --radius:18px; --shadow:0 1px 0 rgba(255,255,255,.03), 0 14px 40px -18px rgba(0,0,0,.7);
+    font-size:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+  body{padding-bottom:96px}
+  .wrap{max-width:540px;margin:0 auto;padding:0 18px}
+  h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.02em}
+  .display{font-family:"SF Pro Display",-apple-system,system-ui,sans-serif;font-weight:700;letter-spacing:-.03em}
+  .eyebrow{font-size:.70rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);font-weight:650}
+  .dim{color:var(--ink-dim)} .faint{color:var(--ink-faint)}
+  .tiny{font-size:.78rem;line-height:1.45} .sm{font-size:.86rem}
+  header{padding:max(20px,env(safe-area-inset-top)) 0 10px;position:sticky;top:0;
+    background:linear-gradient(var(--bg) 72%,transparent);z-index:30}
+  .brandrow{display:flex;align-items:baseline;justify-content:space-between}
+  .brand{font-size:1.35rem}.brand .leaf{color:var(--moss)}
+  .datechip{font-size:.74rem;color:var(--ink-dim);font-variant-numeric:tabular-nums}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:12px 0;box-shadow:var(--shadow)}
+  .card-tight{padding:13px 15px}
+  .row{display:flex;align-items:center;gap:12px}.between{justify-content:space-between}.grow{flex:1;min-width:0}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--moss);color:#16210a;
+    font-weight:680;font-size:.95rem;padding:13px 16px;border-radius:13px;width:100%;transition:transform .08s,filter .15s}
+  .btn:active{transform:scale(.975)} .btn.ghost{background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}
+  .btn.mini{width:auto;padding:9px 14px;font-size:.85rem;border-radius:11px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:var(--panel-2);
+    border:1px solid var(--line);font-size:.84rem;color:var(--ink-dim);font-weight:600;transition:.12s}
+  .chip.on{background:var(--moss);color:#16210a;border-color:transparent}.chip:active{transform:scale(.95)}
+  .dial-wrap{display:flex;align-items:center;gap:18px}
+  .dial{position:relative;width:108px;height:108px;flex:none}.dial svg{transform:rotate(-90deg)}
+  .dial .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .dial .num b{font-size:1.7rem;font-weight:720;letter-spacing:-.03em;line-height:1}
+  .dial .num span{font-size:.62rem;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(20,25,17,.82);backdrop-filter:blur(18px);
+    border-top:1px solid var(--line);padding:8px 0 max(10px,env(safe-area-inset-bottom))}
+  .navin{max-width:540px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+  .nav-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:var(--ink-faint);font-size:.62rem;font-weight:650}
+  .nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7}.nav-btn.on{color:var(--moss)}
+  .view{display:none;animation:fade .22s ease}.view.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .ex{border-top:1px solid var(--line);padding:14px 0}.ex:first-of-type{border-top:none}
+  .ex h3{font-size:1rem;margin-bottom:2px}.ex .meta{font-size:.78rem;color:var(--ink-dim)}
+  .setgrid{display:flex;flex-direction:column;gap:7px;margin-top:11px}
+  .setline{display:flex;align-items:center;gap:8px}
+  .setline .lbl{width:42px;font-size:.72rem;color:var(--ink-faint);font-weight:650}
+  .ipt{flex:1;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);
+    text-align:center;font-size:.95rem;font-weight:650;font-variant-numeric:tabular-nums;min-width:0}
+  .ipt:focus{outline:2px solid var(--moss-deep);border-color:transparent}
+  .ipt::placeholder{color:var(--ink-faint);font-weight:500}
+  .unit{font-size:.72rem;color:var(--ink-faint);width:30px}
+  .badge{font-size:.64rem;padding:3px 8px;border-radius:999px;font-weight:680;letter-spacing:.04em;text-transform:uppercase}
+  .badge.knee{background:rgba(217,138,85,.16);color:var(--clay)}
+  .badge.core{background:rgba(159,194,79,.14);color:var(--moss)}
+  .badge.push{background:rgba(127,176,196,.16);color:var(--sky)}
+  .badge.pull{background:rgba(127,176,196,.16);color:var(--sky)}
+  .coach{margin-top:11px;border-top:1px dashed var(--line);padding-top:11px;display:none}
+  .coach.open{display:block}
+  .coach .crow{display:flex;gap:9px;padding:5px 0;font-size:.8rem;line-height:1.4}
+  .coach .ck{flex:none;width:74px;color:var(--ink-faint);font-weight:650;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
+  .coach .cv{color:var(--ink-dim)}
+  .lastbar{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:.78rem}
+  .lastbar b{color:var(--ink)}
+  .nudge{color:var(--moss);font-weight:640;margin-top:3px;display:block}
+  .coachtoggle{font-size:.74rem;color:var(--moss);font-weight:640;margin-top:9px;display:inline-block}
+  .macro{display:flex;gap:9px}
+  .macro .m{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:11px;text-align:center}
+  .macro .m b{display:block;font-size:1.25rem;font-weight:720;font-variant-numeric:tabular-nums}
+  .macro .m span{font-size:.62rem;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em}
+  .bar{height:7px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin-top:8px}
+  .bar i{display:block;height:100%;border-radius:99px;transition:width .4s}
+  .ruleline{display:flex;gap:10px;padding:11px 0;border-top:1px solid var(--line);align-items:flex-start}
+  .ruleline:first-child{border-top:none}
+  .ruleline .k{flex:none;width:54px;font-weight:720;color:var(--moss);font-size:.95rem;font-variant-numeric:tabular-nums}
+  .ruleline.lo .k{color:var(--clay)}
+  .swap{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+  .swap:first-child{border-top:none}.swap .no{color:var(--ink-dim)}.swap .yes{color:var(--ink);font-weight:620;text-align:right}
+  .dots{display:flex;gap:6px;flex-wrap:wrap}
+  .dot{width:13px;height:13px;border-radius:4px;background:var(--panel-2);border:1px solid var(--line)}
+  .dot.done{background:var(--moss);border-color:transparent}.dot.rest{border-color:var(--moss-deep)}
+  .noise{background:linear-gradient(135deg,#222a1e,#1b2118);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:12px 0}
+  .noise b{color:var(--moss)}
+  .field{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:11px;padding:11px 12px;font-size:.95rem;margin-top:6px}
+  .field:focus{outline:2px solid var(--moss-deep);border-color:transparent}
+  label.lab{font-size:.78rem;color:var(--ink-dim);font-weight:600}
+  .split2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.split3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  a{color:var(--moss)}
+  .seg{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+  .seg button{flex:1;padding:9px;border-radius:9px;font-size:.85rem;font-weight:640;color:var(--ink-dim)}
+  .seg button.on{background:var(--moss);color:#16210a}
+  .hr{height:1px;background:var(--line);margin:14px 0}
+  details summary{cursor:pointer;font-weight:640;list-style:none}details summary::-webkit-details-marker{display:none}
+  details summary::after{content:"  +";color:var(--moss);float:right}details[open] summary::after{content:"  –"}
+  .toast{position:fixed;left:50%;bottom:104px;transform:translateX(-50%) translateY(20px);background:var(--moss);color:#16210a;
+    font-weight:680;padding:11px 18px;border-radius:13px;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s;z-index:60;box-shadow:var(--shadow)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .verdict{border-radius:14px;padding:14px;margin-top:12px;font-size:.9rem;line-height:1.5}
+  .verdict.good{background:rgba(159,194,79,.12);border:1px solid var(--moss-deep)}
+  .verdict.watch{background:rgba(217,138,85,.12);border:1px solid var(--clay)}
+  .verdict.neutral{background:var(--panel-2);border:1px solid var(--line)}
+  .verdict b{color:var(--ink)}
+  .spark{width:100%;height:90px;margin-top:8px}
+  .legend{display:flex;gap:14px;font-size:.72rem;color:var(--ink-faint);margin-top:6px}
+  .legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .milestone{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:.86rem}
+  .milestone:first-child{border-top:none}.milestone b{font-variant-numeric:tabular-nums}
+  .empty{color:var(--ink-faint);font-size:.82rem;text-align:center;padding:18px 6px;line-height:1.5}
+</style>
+</head>
+<body>
+<header><div class="wrap brandrow">
+  <div class="brand display">Steady<span class="leaf"> ·</span></div>
+  <div class="datechip" id="dateChip"></div>
+</div></header>
+
+<main class="wrap">
+<!-- TODAY -->
+<section class="view on" id="v-today"></section>
+<!-- TRAIN -->
+<section class="view" id="v-train"></section>
+<!-- FOOD -->
+<section class="view" id="v-food"></section>
+<!-- PROGRESS -->
+<section class="view" id="v-progress"></section>
+<!-- PLAN -->
+<section class="view" id="v-plan"></section>
+</main>
+
+<nav><div class="navin">
+  <button class="nav-btn on" id="n-today" onclick="go('today')"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Today</button>
+  <button class="nav-btn" id="n-train" onclick="go('train')"><svg viewBox="0 0 24 24"><path d="M6 8v8M18 8v8M4 10v4M20 10v4M7 12h10"/></svg>Train</button>
+  <button class="nav-btn" id="n-food" onclick="go('food')"><svg viewBox="0 0 24 24"><path d="M5 3v8a3 3 0 006 0V3M8 3v18M16 3c-1.5 1-2 3-2 6s.5 4 2 4v8"/></svg>Food</button>
+  <button class="nav-btn" id="n-progress" onclick="go('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16l3-5 3 3 4-7"/></svg>Progress</button>
+  <button class="nav-btn" id="n-plan" onclick="go('plan')"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>Plan</button>
+</div></nav>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   STEADY — data model
+   ========================================================= */
+const KEY='steady_v2';
+const todayStr=()=>new Date().toISOString().slice(0,10);
+
+const defaults=()=>({
+  start:todayStr(), weight:146, height:64, ratio:0.79, sugarCap:40,
+  log:{},                 // date -> {knee, sessionDone, day, protein, meals, sugar, veg, water}
+  sets:{},                // exId -> { 'YYYY-MM-DD': [ {w,r} | {r} | {t} ... ] }
+  body:[],                // [{date, weight, waist}]
+  miles:{pushup:null, plank:null}, // best logged
+  grease:{date:todayStr(), n:0},
+  curDay:'A'
+});
+let S=load();
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));return r&&r.start?Object.assign(defaults(),r):defaults();}catch(e){return defaults();}}
+function save(){localStorage.setItem(KEY,JSON.stringify(S));}
+function day(){const d=todayStr();if(!S.log[d])S.log[d]={knee:null,sessionDone:false,day:S.curDay,protein:0,meals:0,sugar:0,veg:0,water:0};return S.log[d];}
+
+/* =========================================================
+   EXERCISE DATABASE — coaching detail per movement
+   metric: 'wr'=weight+reps · 'reps' · 'time'(sec) · 'side'(reps/side) · 'leg'(reps/leg) · 'timeside'
+   ========================================================= */
+const EX={
+  iso:{name:'Isometric knee hold (Spanish squat / wall sit)',metric:'time',sets:5,tag:'knee',
+    targets:'Quads + patellar tendon (isometric load)',rest:'45–60 sec between holds',
+    tempo:'Hold 45 sec, still and braced',
+    cue:'Knees track over toes, shin vertical-ish, push into the band/wall. Steady, no bouncing.',
+    goal:'The frontline treatment for your jumper\'s knee — isometric holds calm tendon pain and prime the knee to load. Do these first, and on off-days too.',
+    progress:'Add 5 sec per hold, or progress wall-sit → Spanish squat → single-leg as pain stays ≤3/10.'},
+  gsq:{name:'Goblet squat / leg press',metric:'wr',sets:3,tag:'knee',
+    targets:'Quads, glutes, core',rest:'90 sec',tempo:'Lower over 3 sec, brief pause, drive up',
+    cue:'Hold weight at chest, elbows inside knees, sit between your hips, heels down.',
+    goal:'Builds the quad and tendon under controlled load — the slow lowering is what rebuilds a cranky patellar tendon. Knee-safe entry to heavy leg strength.',
+    progress:'Complete all sets at the top of the rep range with good form → add ~2.5–5% load next time. Otherwise repeat and add a rep.'},
+  bench:{name:'Dumbbell bench / chest press',metric:'wr',sets:3,tag:'push',
+    targets:'Chest, front delts, triceps',rest:'90–120 sec',tempo:'Lower 2 sec, press up controlled',
+    cue:'Shoulder blades pulled back and down, wrists stacked over elbows, don\'t flare elbows to 90°.',
+    goal:'Your main horizontal press — this is what carries over to breaking past 20 push-ups. Direct upper-body strength.',
+    progress:'Hit top of range across all sets → +2.5–5 lb per dumbbell. Reps fluctuate as you adapt to a new load — that\'s expected, log them.'},
+  rdl:{name:'Romanian deadlift',metric:'wr',sets:3,tag:'pull',
+    targets:'Hamstrings, glutes, erector spinae (lower back), core',rest:'90 sec',tempo:'3-sec lower, feel the hamstring stretch, drive hips forward',
+    cue:'Hinge at the hips like closing a door behind you with your butt. Bar/dumbbells close to legs, flat back, slight knee bend (~15°).',
+    goal:'Knee-friendly posterior-chain strength that armors the lower back your job strains all day. Builds the hamstrings that stabilize the knee.',
+    progress:'It\'s not a max-effort lift — moderate load, perfect hinge. Add reps first, then small load once 3×8 feels clean. If your back fatigues before your hamstrings, lighten and refine the hinge.'},
+  plank:{name:'Plank',metric:'time',sets:3,tag:'core',
+    targets:'Transverse abdominis, deep core, shoulders',rest:'45–60 sec',tempo:'Hold, breathe steadily',
+    cue:'Forearms down, ribs tucked, squeeze glutes, straight line ear-to-heel. No sagging hips.',
+    goal:'Builds the deep bracing core you found weak — this is the part that protects your back and underlies a visible six-pack, not surface crunches.',
+    progress:'Add 5–10 sec when you can hold the full time with no sag. Past ~60 sec, progress to weighted or long-lever planks instead of just adding minutes.'},
+  deadbug:{name:'Dead bug',metric:'side',sets:3,tag:'core',
+    targets:'Deep core, anti-extension control',rest:'45 sec',tempo:'Slow — extend over 3 sec, control back',
+    cue:'Low back pressed flat to floor the whole time. Opposite arm + leg reach, don\'t let the back arch.',
+    goal:'The "crunch you couldn\'t do," done right. Trains the deep core that a crunch skips — keeping the low back flat is the whole point.',
+    progress:'Add reps per side, then slow the tempo, then add a light weight or band. Keep low back glued down before progressing.'},
+  splitsq:{name:'Split squat / step-up',metric:'leg',sets:3,tag:'knee',
+    targets:'Quads, glutes, single-leg stability',rest:'60–90 sec per leg',tempo:'Controlled down, no knee collapse',
+    cue:'Most weight through the front heel, torso tall, back knee toward floor. Knee tracks over toes.',
+    goal:'Single-leg strength fixes the left/right imbalance feeding your tendon issue and makes walking/standing at work less provocative.',
+    progress:'Bodyweight → goblet hold → heavier. Add reps per leg first; keep it controlled, this is about quality not load.'},
+  pull:{name:'Pull-up (assisted ok) / lat pulldown',metric:'wr',sets:3,tag:'pull',
+    targets:'Lats, mid-back, biceps',rest:'90–120 sec',tempo:'Pull controlled, 2-sec lower',
+    cue:'Start from a full hang/stretch, drive elbows down to your ribs, chest to bar. No kipping.',
+    goal:'Your main vertical pull — balances all the pressing so your shoulders stay healthy. Log assist-weight (less assist = progress) or pulldown load.',
+    progress:'On assisted machine, reduce assistance over time. On pulldown, add load. Aim to add a rep before changing the setting.'},
+  ohp:{name:'Overhead press',metric:'wr',sets:3,tag:'push',
+    targets:'Shoulders, triceps, upper chest, core',rest:'90–120 sec',tempo:'Press up controlled, lower with control',
+    cue:'Brace abs and glutes, ribs down, press the bar/dumbbells to overhead, head "through the window" at top.',
+    goal:'Full-body pressing strength and shoulder health; the bracing also reinforces the core that supports your back.',
+    progress:'Smallest jumps work best here (shoulders progress slowly). Add a rep, then +2.5 lb per side.'},
+  hkr:{name:'Hanging knee raise / cable crunch',metric:'reps',sets:3,tag:'core',
+    targets:'Lower abs, hip flexors, grip',rest:'60 sec',tempo:'Lift controlled, no swinging',
+    cue:'Curl the pelvis up (don\'t just lift the legs), control the lower. If hanging strains grip, use cable crunch.',
+    goal:'Loaded core flexion to round out the deep-core work — builds the visible abdominal strength toward your look goal.',
+    progress:'Add reps → progress knee raise toward straighter legs, or add load on the cable crunch.'},
+  pallof:{name:'Pallof press / side plank',metric:'side',sets:3,tag:'core',
+    targets:'Obliques, anti-rotation core',rest:'45–60 sec',tempo:'Press out 2 sec, hold 1, return slow',
+    cue:'Band/cable at chest, press straight out and resist the pull rotating you. Stay square.',
+    goal:'Anti-rotation is the core quality almost everyone skips — it\'s what truly stabilizes the spine for your job and protects the back.',
+    progress:'Step further from the anchor or add band tension. For side plank, add hold time per side.'}
+};
+const PROG={A:['gsq','bench','rdl','plank','deadbug'], B:['splitsq','pull','ohp','hkr','pallof']};
+
+/* =========================================================
+   PHASE LOGIC (Q1: exercises constant, prescription shifts)
+   ========================================================= */
+function weekNo(){return Math.floor((new Date(todayStr())-new Date(S.start))/6048e5)+1;}
+function isDeload(){return weekNo()%4===0;}
+function phase(){const w=weekNo();
+  if(w<=4)return{n:1,name:'Foundation',reps:'8–12',focus:'Learn the movements and tempo. Higher reps, moderate load. Lock the habit.'};
+  if(w<=12)return{n:2,name:'Build',reps:'6–8',focus:'Heavier, lower reps. Progressive overload in earnest.'};
+  return{n:3,name:'Reveal',reps:'6–10',focus:'Hold strength through the mild deficit while definition appears.'};}
+
+/* =========================================================
+   ROUTER
+   ========================================================= */
+function go(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('on'));
+  document.getElementById('n-'+v).classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+  ({today:renderToday,train:renderTrain,food:renderFood,progress:renderProgress,plan:renderPlan}[v])();
+}
+
+/* =========================================================
+   TODAY
+   ========================================================= */
+const NOISE=[
+ "One treat is a <b>rounding error</b>. Progress is the weekly average, never a single meal — enjoy it, then your next meal is just normal.",
+ "Showing up for the warm-up and one lift still counts as a done day. <b>Consistency beats intensity.</b>",
+ "Tendons want steady load, not rest. The ache from sitting is the knee asking to <b>move</b>, not to stop.",
+ "Water can mask fat loss for the first 2–3 weeks. <b>Judge by 4-week trends</b>, not tomorrow's scale.",
+ "Missed a day? The habit survives one miss. It only dies if you let one miss become a week."
+];
+function renderToday(){
+  const w=weekNo(), ph=phase(), d=day(), C=295.3, frac=Math.min(w/24,1);
+  document.getElementById('dateChip').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+  let title,sub;
+  if(isDeload()){title='Deload week';sub='Drop to ~60% volume. Keep the habit and the knee holds going — this is the part that prevents burnout.';}
+  else if(d.sessionDone){title='Session done ✓';sub='Recovery — protein, water, 8 hrs sleep — is where the muscle actually rebuilds.';}
+  else {title="Today's a training day";sub='Full-body. Knee rehab first, then beat last week by a hair.';}
+  let dots='';for(let i=13;i>=0;i--){const dt=new Date();dt.setDate(dt.getDate()-i);const e=S.log[dt.toISOString().slice(0,10)];dots+=`<div class="dot${e&&e.sessionDone?' done':''}"></div>`;}
+  document.getElementById('v-today').innerHTML=`
+   <div class="card">
+     <div class="eyebrow">Phase ${ph.n} · ${ph.name}</div>
+     <div class="dial-wrap" style="margin-top:12px">
+       <div class="dial"><svg width="108" height="108">
+         <circle cx="54" cy="54" r="47" stroke="#2f3a28" stroke-width="9" fill="none"/>
+         <circle cx="54" cy="54" r="47" stroke="#9fc24f" stroke-width="9" fill="none" stroke-linecap="round"
+           stroke-dasharray="${C}" stroke-dashoffset="${C*(1-frac)}"/></svg>
+         <div class="num"><b>${Math.min(w,24)}</b><span>of 24 wks</span></div></div>
+       <div class="grow"><h2 class="display" style="font-size:1.15rem">${title}</h2>
+         <p class="tiny dim" style="margin:6px 0 0">${sub}</p></div>
+     </div>
+   </div>
+   <div class="card card-tight"><div class="row between">
+     <div><div class="eyebrow">This week</div><div class="tiny dim" style="margin-top:3px">3 sessions · target reps ${ph.reps} · deload every 4th wk</div></div>
+     <div class="dots">${dots}</div></div></div>
+   <button class="btn" onclick="go('train')" style="margin-top:4px">Start today's session →</button>
+   <div class="split2" style="margin-top:10px">
+     <button class="btn ghost mini" style="width:100%" onclick="go('food')">Log a meal</button>
+     <button class="btn ghost mini" style="width:100%" onclick="go('progress')">Check progress</button>
+   </div>
+   <div class="noise"><div class="eyebrow" style="color:var(--moss)">The one rule that matters</div>
+     <p class="tiny" style="margin:8px 0 0;line-height:1.55">${NOISE[(w+new Date().getDate())%NOISE.length]}</p></div>
+   <div class="card"><div class="eyebrow">Knee check-in</div>
+     <p class="tiny dim" style="margin:7px 0 11px">Patellar tendons like steady load, not rest. How is it today?</p>
+     <div class="seg" id="kneeSeg">
+       <button onclick="setKnee(0)">Calm</button><button onclick="setKnee(1)">Achy</button><button onclick="setKnee(2)">Flaring</button></div>
+     <p class="tiny" id="kneeAdvice" style="margin:11px 0 0;line-height:1.5;color:var(--ink-dim)"></p></div>`;
+  paintKnee(d.knee);
+}
+function setKnee(k){day().knee=k;save();paintKnee(k);}
+function paintKnee(k){
+  const seg=document.getElementById('kneeSeg');if(seg)[...seg.children].forEach((b,i)=>b.classList.toggle('on',i===k));
+  const el=document.getElementById('kneeAdvice');if(!el)return;
+  el.innerHTML=k===null?'':[
+   'Good — train as planned. Keep lowers slow (3 sec) to keep building the tendon.',
+   'Fine to train. Start with the isometric holds, keep squat pain ≤3/10, skip impact today.',
+   'Flaring: isometric wall-sits and upper-body work only today. Skip deep loaded knee bends. Sharp or worse tomorrow → ease the load, not the movement.'
+  ][k];
+}
+
+/* =========================================================
+   TRAIN — logging + coaching + last-time + auto progression
+   ========================================================= */
+function pickDay(dd){S.curDay=dd;day().day=dd;save();renderTrain();}
+function lastEntry(exId){const h=S.sets[exId];if(!h)return null;const ds=Object.keys(h).filter(d=>d!==todayStr()).sort();if(!ds.length)return null;return{date:ds[ds.length-1],sets:h[ds[ds.length-1]]};}
+function fmtSet(s,metric){
+  if(metric==='wr')return (s.w||s.w===0?s.w:'–')+(s.w!==undefined&&s.w!==''?' lb':'')+' × '+(s.r??'–');
+  if(metric==='reps')return (s.r??'–')+' reps';
+  if(metric==='time')return (s.t??'–')+' sec';
+  if(metric==='side')return (s.r??'–')+' /side';
+  if(metric==='leg')return (s.r??'–')+' /leg';
+  return JSON.stringify(s);
+}
+function progNudge(exId,metric){
+  const last=lastEntry(exId);if(!last)return 'First time — log your sets and Steady remembers them for next session.';
+  const ph=phase();
+  if(metric==='wr'){
+    const reps=last.sets.map(s=>+s.r||0), top=Math.max(...reps), allHigh=reps.every(r=>r>=8);
+    if(allHigh)return 'You hit the rep range last time — add ~2.5–5 lb this session.';
+    return 'Match or beat last time: aim to add a rep on each set before adding weight.';
+  }
+  if(metric==='time'){const best=Math.max(...last.sets.map(s=>+s.t||0));return `Last best hold: ${best} sec. Add 5–10 sec if it felt solid.`;}
+  const best=Math.max(...last.sets.map(s=>+s.r||0));return `Last best: ${best}. Add a rep where you can keep good form.`;
+}
+function renderTrain(){
+  const dd=S.curDay, ph=phase();
+  let cards='';
+  // iso primer first (always)
+  cards+=exCard('iso',true);
+  PROG[dd].forEach(id=>cards+=exCard(id,false));
+  document.getElementById('v-train').innerHTML=`
+   <div class="card card-tight"><div class="row between">
+     <div><div class="eyebrow">Today · Phase ${ph.n} target ${ph.reps} reps</div>
+       <h2 class="display" style="font-size:1.2rem;margin-top:3px">Workout ${dd}</h2></div>
+     <div class="seg" style="width:auto">
+       <button class="${dd==='A'?'on':''}" onclick="pickDay('A')">A</button>
+       <button class="${dd==='B'?'on':''}" onclick="pickDay('B')">B</button></div>
+   </div></div>
+   ${cards}
+   <button class="btn" onclick="finishSession()">Mark session complete ✓</button>
+   <p class="tiny faint" style="text-align:center;margin:12px 0 0">Numbers save as you type. Tap <b>Coaching</b> on any move for form, rest, and how to advance.</p>`;
+  // hydrate inputs
+  ['iso',...PROG[dd]].forEach(id=>hydrate(id));
+}
+function exCard(id,isIso){
+  const ex=EX[id], badge=ex.tag?`<span class="badge ${ex.tag}">${ex.tag==='knee'?'knee-safe':ex.tag}</span>`:'';
+  const last=lastEntry(id);
+  const lastHtml=last
+    ? `<div class="lastbar">Last time · <span class="dim">${last.date.slice(5)}</span> &nbsp;<b>${last.sets.map(s=>fmtSet(s,ex.metric)).join(' · ')}</b>
+        <span class="nudge">${progNudge(id,ex.metric)}</span></div>`
+    : `<div class="lastbar dim">${progNudge(id,ex.metric)}</div>`;
+  const unit={wr:'',time:'sec',reps:'reps',side:'/side',leg:'/leg'}[ex.metric];
+  return `<div class="card${isIso?'':''}"${isIso?' style="border-color:rgba(217,138,85,.4)"':''}>
+    <div class="row between"><div class="row" style="gap:8px"><h3 style="font-size:1rem">${ex.name}</h3></div>${badge}</div>
+    <div class="meta" style="margin-top:3px">${isIso?'Rehab first · ':''}${ex.metric==='wr'?'Log weight × reps':ex.metric==='time'?'Log hold time':ex.metric==='side'?'Log reps per side':ex.metric==='leg'?'Log reps per leg':'Log reps'} · ${ex.sets} sets · rest ${ex.rest}</div>
+    <div class="setgrid" id="sets-${id}"></div>
+    ${lastHtml}
+    <span class="coachtoggle" onclick="toggleCoach('${id}')">Coaching ▾</span>
+    <div class="coach" id="coach-${id}">
+      <div class="crow"><div class="ck">Targets</div><div class="cv">${ex.targets}</div></div>
+      <div class="crow"><div class="ck">Tempo / hold</div><div class="cv">${ex.tempo}</div></div>
+      <div class="crow"><div class="ck">Rest</div><div class="cv">${ex.rest}</div></div>
+      <div class="crow"><div class="ck">Form cue</div><div class="cv">${ex.cue}</div></div>
+      <div class="crow"><div class="ck">Why · you</div><div class="cv">${ex.goal}</div></div>
+      <div class="crow"><div class="ck">Advance</div><div class="cv">${ex.progress}</div></div>
+    </div></div>`;
+}
+function toggleCoach(id){document.getElementById('coach-'+id).classList.toggle('open');}
+function hydrate(id){
+  const ex=EX[id], host=document.getElementById('sets-'+id);if(!host)return;
+  const today=S.sets[id]&&S.sets[id][todayStr()]?S.sets[id][todayStr()]:[];
+  host.innerHTML='';
+  for(let i=0;i<ex.sets;i++){
+    const cur=today[i]||{};
+    const line=document.createElement('div');line.className='setline';
+    let inner=`<div class="lbl">Set ${i+1}</div>`;
+    if(ex.metric==='wr'){
+      inner+=`<input class="ipt" type="number" inputmode="decimal" placeholder="lb" value="${cur.w??''}" oninput="setVal('${id}',${i},'w',this.value)">
+              <input class="ipt" type="number" inputmode="numeric" placeholder="reps" value="${cur.r??''}" oninput="setVal('${id}',${i},'r',this.value)">`;
+    } else if(ex.metric==='time'){
+      inner+=`<input class="ipt" type="number" inputmode="numeric" placeholder="seconds" value="${cur.t??''}" oninput="setVal('${id}',${i},'t',this.value)"><div class="unit">sec</div>`;
+    } else {
+      const u=ex.metric==='side'?'/side':ex.metric==='leg'?'/leg':'reps';
+      inner+=`<input class="ipt" type="number" inputmode="numeric" placeholder="reps" value="${cur.r??''}" oninput="setVal('${id}',${i},'r',this.value)"><div class="unit">${u}</div>`;
+    }
+    line.innerHTML=inner;host.appendChild(line);
+  }
+}
+function setVal(id,i,field,val){
+  if(!S.sets[id])S.sets[id]={};
+  const d=todayStr();if(!S.sets[id][d])S.sets[id][d]=[];
+  if(!S.sets[id][d][i])S.sets[id][d][i]={};
+  S.sets[id][d][i][field]=val===''?undefined:(+val);
+  save();
+}
+function finishSession(){day().sessionDone=true;day().day=S.curDay;save();toast('Session logged ✓');go('today');}
+
+/* =========================================================
+   FOOD — protein hero + gentle sugar awareness + positive habits
+   ========================================================= */
+function pGoal(){return Math.round(S.weight*S.ratio);}
+function renderFood(){
+  const d=day(), goal=pGoal(), pPct=Math.min(100,Math.round(d.protein/goal*100));
+  const sPct=Math.min(100,Math.round(d.sugar/S.sugarCap*100));
+  const sugarColor=d.sugar<=S.sugarCap?'var(--moss)':'var(--clay)';
+  document.getElementById('v-food').innerHTML=`
+   <div class="card">
+     <div class="eyebrow">Today · protein first</div>
+     <div class="macro" style="margin-top:12px">
+       <div class="m"><b style="color:var(--moss)">${d.protein}</b><span>protein g</span></div>
+       <div class="m"><b>${goal}</b><span>target g</span></div>
+       <div class="m"><b>${d.meals}</b><span>meals</span></div></div>
+     <div class="bar"><i style="width:${pPct}%;background:var(--moss)"></i></div>
+     <p class="tiny dim" style="margin:9px 0 0">${d.protein>=goal?'<b style="color:var(--moss)">Protein hit ✓</b> — the day\'s most important box.':`${goal-d.protein} g to go. Hit protein and the rest mostly handles itself.`}</p>
+     <div class="split2" style="margin-top:13px">
+       <button class="chip" onclick="addP(20)">+20 g</button><button class="chip" onclick="addP(30)">+30 g</button>
+       <button class="chip" onclick="addP(40)">+40 g</button><button class="chip" onclick="addP(0)">meal only</button></div>
+   </div>
+
+   <div class="card">
+     <div class="row between"><div class="eyebrow">Added sugar · awareness</div><div class="tiny faint">${d.sugar} / ${S.sugarCap} g</div></div>
+     <div class="bar"><i style="width:${sPct}%;background:${sugarColor}"></i></div>
+     <p class="tiny dim" style="margin:9px 0 0">This is a soft gauge, not a rule. Watching it just makes the habit visible — research shows that awareness alone nudges choices. Natural sugar in fruit/milk doesn't count here; this is the <i>added</i> stuff.</p>
+     <div class="split3" style="margin-top:12px">
+       <button class="chip" onclick="addSugar(10)">+10 g</button><button class="chip" onclick="addSugar(25)">treat ~25</button>
+       <button class="chip" onclick="addSugar(0,true)">reset</button></div>
+   </div>
+
+   <div class="card">
+     <div class="eyebrow">Build something good</div>
+     <p class="tiny dim" style="margin:7px 0 11px">Tracking good habits beats tracking restriction. Tap when you get them in:</p>
+     <div class="row between" style="margin-bottom:10px">
+       <div class="sm"><b>Veg / fruit servings</b><div class="tiny faint">aim ~5 · half your plate</div></div>
+       <div class="row" style="gap:8px"><button class="chip" onclick="bump('veg',-1)">–</button><b style="min-width:18px;text-align:center">${d.veg}</b><button class="chip" onclick="bump('veg',1)">+</button></div>
+     </div>
+     <div class="row between">
+       <div class="sm"><b>Water glasses</b><div class="tiny faint">helps with the sugar cravings too</div></div>
+       <div class="row" style="gap:8px"><button class="chip" onclick="bump('water',-1)">–</button><b style="min-width:18px;text-align:center">${d.water}</b><button class="chip" onclick="bump('water',1)">+</button></div>
+     </div>
+   </div>
+
+   <div class="noise"><div class="eyebrow" style="color:var(--moss)">Had a donut? Read this.</div>
+     <p class="tiny" style="margin:8px 0 0;line-height:1.55">One treat is a <b>rounding error</b>, not a failure. Fat loss is the <b>weekly average</b> — a 500-cal daily deficit banks ~3,500/week, and one indulgence of even 1,000 extra still leaves you ahead. The only real derailer is letting guilt turn one donut into a lost week. Enjoy it, log it, and your <b>next meal is just normal</b>. No earning it back.</p></div>
+
+   <div class="card"><div class="eyebrow">Reading a label in 10 seconds — the 5/20 rule</div>
+     <div style="margin-top:11px">
+       <div class="ruleline"><div class="k">≥20%</div><div class="grow"><b>Fiber</b> — high DV is a win. Aim ≥3 g per serving; keeps you full, steadies energy.</div></div>
+       <div class="ruleline"><div class="k">≥20%</div><div class="grow"><b>Protein</b> — 20–30 g per meal, 5 g+ per snack. The lever for keeping muscle while leaning out.</div></div>
+       <div class="ruleline lo"><div class="k">≤5%</div><div class="grow"><b>Added sugar</b> — under ~6–7 g per serving. Note it's <i>added</i>, separate from natural sugar.</div></div>
+       <div class="ruleline lo"><div class="k">≤5%</div><div class="grow"><b>Sodium</b> — adds up fast in canned, frozen, snacks.</div></div>
+       <div class="ruleline lo"><div class="k">0 g</div><div class="grow"><b>Trans fat</b> — keep at zero; watch "partially hydrogenated" even if it claims 0 g.</div></div>
+     </div>
+     <p class="tiny faint" style="margin:11px 0 0">5% DV or less = low · 20% or more = high. The front sells; the back tells.</p></div>
+
+   <div class="card"><div class="eyebrow">Plate, not spreadsheet</div>
+     <p class="tiny dim" style="margin:8px 0 11px">Don't weigh grams — build the plate:</p>
+     <div class="swap"><span class="no">½ plate</span><span class="yes">vegetables / fruit</span></div>
+     <div class="swap"><span class="no">¼ plate</span><span class="yes">protein — palm-sized+</span></div>
+     <div class="swap"><span class="no">¼ plate</span><span class="yes">carbs — rice, oats, potato</span></div>
+     <div class="swap"><span class="no">around it</span><span class="yes">water, a thumb of fats</span></div>
+     <details style="margin-top:13px"><summary class="tiny" style="color:var(--moss)">Easy protein anchors</summary>
+       <p class="tiny dim" style="margin:9px 0 0;line-height:1.6">Greek yogurt (~17 g/cup) · eggs (6 g each) · chicken breast (~30 g/palm) · canned tuna (~25 g) · cottage cheese (~14 g/½ cup) · whey shake (~24 g) · lentils/beans (~9 g/½ cup) · tofu (~10 g/half block).</p></details></div>
+
+   <div class="card card-tight"><p class="tiny dim" style="line-height:1.5">Keep <b style="color:var(--ink)">creatine</b> daily — ~5 g, timing doesn't matter, one of the most evidence-backed strength supplements and safe long-term. Ride it on your shake habit.</p></div>`;
+}
+function addP(g){const d=day();d.protein+=g;d.meals+=1;save();renderFood();toast(g?'+'+g+' g protein':'Meal logged');}
+function addSugar(g,reset){const d=day();if(reset){d.sugar=0;}else d.sugar+=g;save();renderFood();if(!reset)toast('+'+g+' g sugar');}
+function bump(k,n){const d=day();d[k]=Math.max(0,d[k]+n);save();renderFood();}
+
+/* =========================================================
+   PROGRESS — the "is it working?" engine
+   ========================================================= */
+function trendArrow(arr){ // returns -1 down, 0 flat, 1 up using first vs last avg
+  if(arr.length<2)return 0;
+  const a=arr[0], b=arr[arr.length-1], diff=b-a;
+  const thresh=Math.abs(a)*0.01; // ~1% noise band
+  if(diff<-thresh)return -1; if(diff>thresh)return 1; return 0;
+}
+function renderProgress(){
+  const body=S.body.slice().sort((a,b)=>a.date<b.date?-1:1);
+  const weights=body.filter(b=>b.weight).map(b=>b.weight);
+  const waists=body.filter(b=>b.waist).map(b=>b.waist);
+  const wT=trendArrow(weights), waT=trendArrow(waists);
+  // verdict matrix (Q3)
+  let vClass='neutral', vText='Log weight and waist a few times (every 1–2 weeks) and Steady will read the trend for you. One reading isn\'t a trend — give it time.';
+  if(weights.length>=2&&waists.length>=2){
+    if(waT<0&&wT<0){vClass='good';vText='<b>Fat loss.</b> Weight and waist both trending down — exactly what you want. Keep the protein up so it stays fat, not muscle.';}
+    else if(waT<0&&wT===0){vClass='good';vText='<b>Recomposition.</b> Waist shrinking while weight holds = losing fat <i>and</i> building muscle at once. This is the dream outcome for where you are. The scale "lying" here is good news.';}
+    else if(waT<0&&wT>0){vClass='good';vText='<b>Muscle gain with fat loss.</b> Waist down, weight up — you\'re adding muscle. Great for strength; if the look is the priority, keep the deficit mild.';}
+    else if(waT===0&&wT<0){vClass='watch';vText='<b>Worth a look.</b> Weight down but waist flat can mean some muscle loss. Make sure you\'re hitting protein (~'+pGoal()+' g) and not cutting too hard.';}
+    else if(waT>0){vClass='watch';vText='<b>Waist trending up.</b> Likely a slightly loose week or higher sodium/carbs (water). Tighten the mild deficit and recheck in 1–2 weeks before changing anything.';}
+    else {vClass='neutral';vText='<b>Holding steady.</b> No clear trend yet — normal early on. Water retention masks fat loss for the first 2–3 weeks; judge by 4-week trends.';}
+  }
+  // waist-to-height
+  let whtr='';
+  if(waists.length){const last=waists[waists.length-1];const r=(last/S.height);
+    whtr=`<div class="milestone"><span>Waist-to-height ratio</span><b>${r.toFixed(2)} ${r<0.5?'· in range ✓':'· aim <0.50'}</b></div>`;}
+  // strength: total volume trend across all wr exercises
+  const volSeries=strengthVolumeSeries();
+  // milestones
+  const m=S.miles;
+  document.getElementById('v-progress').innerHTML=`
+   <div class="card">
+     <div class="eyebrow">Is it working?</div>
+     <div class="verdict ${vClass}">${vText}</div>
+     <div class="legend" style="margin-top:12px">
+       <span>Weight ${arrowGlyph(wT)}</span><span>Waist ${arrowGlyph(waT)}</span>
+       <span class="faint">${body.length} check-in${body.length===1?'':'s'}</span></div>
+     ${sparkline(weights,'#eef2e6','Weight (lb)')}
+     ${sparkline(waists,'#7fb0c4','Waist (in)')}
+   </div>
+
+   <div class="card">
+     <div class="eyebrow">Log a check-in</div>
+     <p class="tiny dim" style="margin:7px 0 0">Weigh in the morning. Measure the waist at the belly button after a normal breath out. Every 1–2 weeks is plenty — trends matter, not single days.</p>
+     <div class="split2" style="margin-top:12px">
+       <div><label class="lab">Weight (lb)</label><input class="field" id="inW" type="number" inputmode="decimal" placeholder="${S.weight}"></div>
+       <div><label class="lab">Waist (in)</label><input class="field" id="inWa" type="number" inputmode="decimal" placeholder="e.g. 33"></div></div>
+     <button class="btn mini" style="width:100%;margin-top:11px" onclick="logBody()">Save check-in</button>
+     ${whtr?`<div style="margin-top:12px">${whtr}</div>`:''}
+   </div>
+
+   <div class="card">
+     <div class="eyebrow">Strength is progress too</div>
+     <p class="tiny dim" style="margin:7px 0 0">Total weekly lifting volume (weight × reps). This climbs even when the scale is flat — proof the work is paying off.</p>
+     ${volSeries.vals.length>=2
+        ? sparkline(volSeries.vals,'#9fc24f','Volume (lb)')+`<p class="tiny faint" style="margin:8px 0 0">${volSeries.first} → ${volSeries.last} lb over ${volSeries.vals.length} sessions logged${volSeries.last>volSeries.first?' · trending up ✓':''}.</p>`
+        : `<div class="empty">Log a few training sessions and your strength curve appears here automatically.</div>`}
+   </div>
+
+   <div class="card">
+     <div class="eyebrow">Functional milestones</div>
+     <div class="milestone"><span>Max push-ups (one set)</span><b>${m.pushup??'—'}</b></div>
+     <div class="milestone"><span>Longest plank</span><b>${m.plank?m.plank+' sec':'—'}</b></div>
+     <p class="tiny dim" style="margin:11px 0 8px">Retest every 2–4 weeks. These are non-scale victories that show real change.</p>
+     <div class="split2">
+       <div><label class="lab">Push-up max</label><input class="field" id="inPu" type="number" inputmode="numeric" placeholder="${m.pushup??'reps'}"></div>
+       <div><label class="lab">Plank (sec)</label><input class="field" id="inPl" type="number" inputmode="numeric" placeholder="${m.plank??'sec'}"></div></div>
+     <button class="btn ghost mini" style="width:100%;margin-top:11px" onclick="logMiles()">Save milestones</button>
+   </div>
+
+   <div class="card card-tight"><p class="tiny dim" style="line-height:1.5">Heads-up for the first weeks: new training adds 2–5 lb of water that <b style="color:var(--ink)">masks fat loss</b>. Beginners also gain strength fastest now (10–15% in 3 weeks). Don't read the daily scale — read the 4-week trend.</p></div>`;
+}
+function arrowGlyph(t){return t<0?'↓':t>0?'↑':'→';}
+function logBody(){
+  const w=parseFloat(document.getElementById('inW').value), wa=parseFloat(document.getElementById('inWa').value);
+  if(!w&&!wa){toast('Enter a number');return;}
+  const d=todayStr(), ex=S.body.find(b=>b.date===d);
+  if(ex){if(w)ex.weight=w;if(wa)ex.waist=wa;}else S.body.push({date:d,weight:w||null,waist:wa||null});
+  if(w)S.weight=w;save();renderProgress();toast('Check-in saved');
+}
+function logMiles(){
+  const pu=parseInt(document.getElementById('inPu').value), pl=parseInt(document.getElementById('inPl').value);
+  if(pu)S.miles.pushup=pu; if(pl)S.miles.plank=pl; save();renderProgress();toast('Milestones saved');
+}
+function strengthVolumeSeries(){
+  // sum weight*reps per date across all weight+rep exercises
+  const byDate={};
+  Object.keys(S.sets).forEach(id=>{if(EX[id]&&EX[id].metric==='wr'){
+    Object.keys(S.sets[id]).forEach(d=>{
+      let v=0;S.sets[id][d].forEach(s=>{if(s&&s.w&&s.r)v+=s.w*s.r;});
+      byDate[d]=(byDate[d]||0)+v;});
+  }});
+  const ds=Object.keys(byDate).sort(), vals=ds.map(d=>Math.round(byDate[d])).filter(v=>v>0);
+  return{vals,first:vals[0]||0,last:vals[vals.length-1]||0};
+}
+function sparkline(vals,color,label){
+  if(!vals||!vals.length)return `<div class="empty">No ${label.toLowerCase()} logged yet.</div>`;
+  if(vals.length===1)return `<p class="tiny faint" style="margin:8px 0 0">${label}: <b style="color:${color}">${vals[0]}</b> · one point so far — log again to see a trend.</p>`;
+  const W=480,H=80,pad=6,min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1;
+  const pts=vals.map((v,i)=>[pad+i*(W-2*pad)/(vals.length-1), H-pad-(v-min)/span*(H-2*pad)]);
+  const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const last=pts[pts.length-1];
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+     <path d="${path}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+     <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="${color}"/>
+   </svg>
+   <p class="tiny faint" style="margin:2px 0 0">${label}: ${vals[0]} → <b style="color:${color}">${vals[vals.length-1]}</b></p>`;
+}
+
+/* =========================================================
+   PLAN
+   ========================================================= */
+function renderPlan(){
+  const ph=phase();
+  document.getElementById('v-plan').innerHTML=`
+   <div class="card"><div class="eyebrow">The 6-month arc</div>
+     <p class="tiny dim" style="margin:7px 0 0">~12% body fat with real strength. 3 full-body days/week, 4-week blocks (3 build, 1 deload). The <b>movements stay the same</b> — that's by design: you need reps to master the lifts and to track progress. What changes is the prescription.</p>
+     <div style="margin-top:14px">
+       <div class="ex" style="border-top:none"><div class="row between"><h3>Weeks 1–4 · Foundation</h3>${ph.n===1?'<span class="badge core">now</span>':''}</div>
+         <p class="meta" style="margin-top:4px">Reps 8–12. Learn movements + tempo, load the tendon without flares, lock the habit. Strength jumps fast (neural).</p></div>
+       <div class="ex"><div class="row between"><h3>Weeks 5–12 · Build</h3>${ph.n===2?'<span class="badge core">now</span>':''}</div>
+         <p class="meta" style="margin-top:4px">Reps 6–8, heavier. Real progressive overload. Push-ups break 30. Core visibly stronger.</p></div>
+       <div class="ex"><div class="row between"><h3>Weeks 13–24 · Reveal</h3>${ph.n===3?'<span class="badge core">now</span>':''}</div>
+         <p class="meta" style="margin-top:4px">Mild deficit uncovers definition. ~12% with genuine strength. Maybe reintroduce light running once the knee tolerates heavy slow squats.</p></div>
+     </div></div>
+
+   <div class="card"><div class="eyebrow">How progression actually works</div>
+     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6">Hit the top of the rep range with good form on every set → add ~2.5–5% load next session. Can't yet? Repeat and add a rep first. Steady reads your last session and tells you which to do on each exercise. Reps will wobble as you adapt to a new weight — that's why you log <b style="color:var(--ink)">both</b> weight and reps.</p></div>
+
+   <div class="card"><div class="eyebrow">Conditioning (low-impact for the knee)</div>
+     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6"><b style="color:var(--ink)">Swim 1–2×/week, 20–30 min</b> — zero impact, great for the 12%. Or <b style="color:var(--ink)">pickleball</b> once a week (warm the knee first; lateral cuts provoke it). Hold off on running. Your walking-heavy job already counts.</p></div>
+
+   <div class="card"><div class="eyebrow">Grease the groove — push-ups</div>
+     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6">On non-gym days, 2–3 sets at ~60% of max (≈12 clean reps) spread through the day. Low fatigue, fast skill gain.</p>
+     <button class="btn ghost mini" style="width:100%;margin-top:12px" onclick="grease()">Logged a GtG set ✓ <span class="faint" id="gct">${S.grease.date===todayStr()&&S.grease.n?'· '+S.grease.n+' today':''}</span></button></div>
+
+   <div class="card"><div class="eyebrow">When motivation dips</div>
+     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6">Habit is the engine, and breaking it makes restarting hard — so the rule is <b style="color:var(--ink)">never fully stop</b>. Bad day? Warm-up + one lift still counts. Even deload weeks keep the knee holds and a walk going.</p></div>
+
+   <div class="hr"></div>
+   <div class="card card-tight"><div class="eyebrow">Your numbers</div>
+     <div class="split2" style="margin-top:12px">
+       <div><label class="lab">Weight (lb)</label><input class="field" id="setW" type="number" inputmode="decimal" value="${S.weight}"></div>
+       <div><label class="lab">Height (in)</label><input class="field" id="setH" type="number" inputmode="decimal" value="${S.height}"></div></div>
+     <div class="split2" style="margin-top:10px">
+       <div><label class="lab">Protein g/lb</label><input class="field" id="setR" type="number" step="0.05" inputmode="decimal" value="${S.ratio}"></div>
+       <div><label class="lab">Sugar gauge (g)</label><input class="field" id="setS" type="number" inputmode="numeric" value="${S.sugarCap}"></div></div>
+     <button class="btn ghost mini" style="width:100%;margin-top:11px" onclick="saveNums()">Save</button></div>
+
+   <div class="card card-tight"><div class="eyebrow">Backup your data</div>
+     <p class="tiny dim" style="margin:7px 0 11px">Your logs live on this phone. Export a backup file now and then — then you can restore it if you switch phones or clear Safari.</p>
+     <div class="split2">
+       <button class="btn ghost mini" style="width:100%" onclick="exportData()">Export backup</button>
+       <button class="btn ghost mini" style="width:100%" onclick="document.getElementById('importFile').click()">Import backup</button></div>
+     <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(this)">
+   </div>
+
+   <p class="tiny faint" style="text-align:center;margin:18px 0 4px">Steady — built for one person, on purpose.<br>Strength for health. The look is a bonus.</p>`;
+}
+function grease(){if(S.grease.date!==todayStr())S.grease={date:todayStr(),n:0};S.grease.n++;save();const g=document.getElementById('gct');if(g)g.textContent='· '+S.grease.n+' today';toast('GtG set logged');}
+function saveNums(){
+  const w=parseFloat(document.getElementById('setW').value),h=parseFloat(document.getElementById('setH').value),
+        r=parseFloat(document.getElementById('setR').value),s=parseInt(document.getElementById('setS').value);
+  if(w>0)S.weight=w;if(h>0)S.height=h;if(r>0)S.ratio=r;if(s>0)S.sugarCap=s;save();toast('Saved');renderPlan();
+}
+
+/* ---------- backup: export / import ---------- */
+function exportData(){
+  try{
+    const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download='steady-backup-'+todayStr()+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast('Backup exported');
+  }catch(e){toast('Export failed');}
+}
+function importData(input){
+  const file=input.files&&input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      if(!data||!data.start){toast('Not a Steady backup');return;}
+      if(!confirm('Replace all current data with this backup? This cannot be undone.')){return;}
+      S=Object.assign(defaults(),data); save();
+      toast('Backup restored'); renderPlan();
+    }catch(e){toast('Could not read file');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- toast + init ---------- */
+let tT;function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('show'),1600);}
+if(S.grease.date!==todayStr()){S.grease={date:todayStr(),n:0};save();}
+renderToday();
+
+/* ---------- service worker (offline app) ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
