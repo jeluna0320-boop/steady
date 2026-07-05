@@ -157,20 +157,52 @@
 /* =========================================================
    STEADY — data model
    ========================================================= */
-const KEY='steady_v2';
+const KEY='steady_v3';
 const todayStr=()=>new Date().toISOString().slice(0,10);
 
+/* Your real logged bests (from the app you exported) — carried in as the starting reference
+   so progression nudges work from day one and you can dial DOWN for the restart. */
+const SEED={
+  aha3o:[{t:40},{t:40},{t:40},{t:40}],
+  '88gwk':[{t:45,w:30},{t:45,w:30},{t:45,w:30},{t:45,w:30}],
+  v5pfu:[{t:30},{t:30},{t:30},{t:30}],
+  wi2ge:[{w:85,r:8},{w:85,r:8},{w:85,r:8},{w:85,r:8}],
+  '06f51':[{w:90,r:10},{w:100,r:10},{w:90,r:10},{w:90,r:10}],
+  w2vqh:[{w:30,r:10},{w:30,r:10},{w:30,r:10},{w:35,r:10}],
+  lyvib:[{w:60,r:10},{w:70,r:10},{w:70,r:10},{w:85,r:9}],
+  '1lalp':[{w:90,r:10},{w:90,r:10},{w:135,r:8},{w:135,r:8}],
+  '575mf':[{w:55,r:10},{w:60,r:10},{w:60,r:10},{w:60,r:10}],
+  '13goy':[{w:20,r:10},{w:20,r:10},{w:20,r:10}],
+  el6wc:[{w:20,r:15},{w:30,r:12},{w:30,r:12},{w:30,r:15}],
+  '0mqs8':[{w:95,r:8},{w:95,r:6},{w:95,r:6},{w:95,r:6}],
+  pghuz:[{w:115,r:12},{w:115,r:12},{w:120,r:12}],
+  yxv0x:[{w:65,r:11},{w:75,r:10},{w:75,r:10},{w:75,r:10}]
+};
+const SEED_DATE='2026-06-19'; // your last real session block
+
 const defaults=()=>({
-  start:todayStr(), weight:146, height:64, ratio:0.79, sugarCap:40,
+  start:'2026-04-25', weight:143, height:64, ratio:0.79, sugarCap:40,  // real program start + last bodyweight
   log:{},                 // date -> {knee, sessionDone, day, protein, meals, sugar, veg, water}
   sets:{},                // exId -> { 'YYYY-MM-DD': [ {w,r} | {r} | {t} ... ] }
-  body:[],                // [{date, weight, waist}]
-  miles:{pushup:null, plank:null}, // best logged
+  body:[{date:'2026-05-16',weight:143,waist:null}], // your logged bodyweight
+  miles:{pushup:null, plank:null},
+  ext:[],                 // external exercise log: [{date, kind, min, effort}]
   grease:{date:todayStr(), n:0},
+  seeded:false,
   curDay:'A'
 });
 let S=load();
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));return r&&r.start?Object.assign(defaults(),r):defaults();}catch(e){return defaults();}}
+/* one-time: drop your real bests in as the "previous session" reference,
+   mapped from your old exercise IDs onto the new A/B/C exercise keys. */
+function seedHistory(){
+  if(S.seeded)return;
+  Object.keys(EX).forEach(k=>{
+    const oldId=EX[k].seed;
+    if(oldId&&SEED[oldId]){ if(!S.sets[k])S.sets[k]={}; S.sets[k][SEED_DATE]=SEED[oldId]; }
+  });
+  S.seeded=true; save();
+}
 function save(){localStorage.setItem(KEY,JSON.stringify(S));}
 function day(){const d=todayStr();if(!S.log[d])S.log[d]={knee:null,sessionDone:false,day:S.curDay,protein:0,meals:0,sugar:0,veg:0,water:0};return S.log[d];}
 
@@ -178,73 +210,141 @@ function day(){const d=todayStr();if(!S.log[d])S.log[d]={knee:null,sessionDone:f
    EXERCISE DATABASE — coaching detail per movement
    metric: 'wr'=weight+reps · 'reps' · 'time'(sec) · 'side'(reps/side) · 'leg'(reps/leg) · 'timeside'
    ========================================================= */
+/* Personalized A/B/C rotation. Keeps your posterior-chain bias (pull>push) and a knee-load
+   in EVERY session, using solid repeated compounds (strength is a skill). 'seed' carries your
+   real logged weights in as the first "last time" so progression starts from where you were. */
 const EX={
-  iso:{name:'Isometric knee hold (Spanish squat / wall sit)',metric:'time',sets:5,tag:'knee',
-    targets:'Quads + patellar tendon (isometric load)',rest:'45–60 sec between holds',
-    tempo:'Hold 45 sec, still and braced',
-    cue:'Knees track over toes, shin vertical-ish, push into the band/wall. Steady, no bouncing.',
-    goal:'The frontline treatment for your jumper\'s knee — isometric holds calm tendon pain and prime the knee to load. Do these first, and on off-days too.',
-    progress:'Add 5 sec per hold, or progress wall-sit → Spanish squat → single-leg as pain stays ≤3/10.'},
-  gsq:{name:'Goblet squat / leg press',metric:'wr',sets:3,tag:'knee',
-    targets:'Quads, glutes, core',rest:'90 sec',tempo:'Lower over 3 sec, brief pause, drive up',
-    cue:'Hold weight at chest, elbows inside knees, sit between your hips, heels down.',
-    goal:'Builds the quad and tendon under controlled load — the slow lowering is what rebuilds a cranky patellar tendon. Knee-safe entry to heavy leg strength.',
-    progress:'Complete all sets at the top of the rep range with good form → add ~2.5–5% load next time. Otherwise repeat and add a rep.'},
-  bench:{name:'Dumbbell bench / chest press',metric:'wr',sets:3,tag:'push',
-    targets:'Chest, front delts, triceps',rest:'90–120 sec',tempo:'Lower 2 sec, press up controlled',
-    cue:'Shoulder blades pulled back and down, wrists stacked over elbows, don\'t flare elbows to 90°.',
-    goal:'Your main horizontal press — this is what carries over to breaking past 20 push-ups. Direct upper-body strength.',
-    progress:'Hit top of range across all sets → +2.5–5 lb per dumbbell. Reps fluctuate as you adapt to a new load — that\'s expected, log them.'},
-  rdl:{name:'Romanian deadlift',metric:'wr',sets:3,tag:'pull',
-    targets:'Hamstrings, glutes, erector spinae (lower back), core',rest:'90 sec',tempo:'3-sec lower, feel the hamstring stretch, drive hips forward',
-    cue:'Hinge at the hips like closing a door behind you with your butt. Bar/dumbbells close to legs, flat back, slight knee bend (~15°).',
-    goal:'Knee-friendly posterior-chain strength that armors the lower back your job strains all day. Builds the hamstrings that stabilize the knee.',
-    progress:'It\'s not a max-effort lift — moderate load, perfect hinge. Add reps first, then small load once 3×8 feels clean. If your back fatigues before your hamstrings, lighten and refine the hinge.'},
+  /* ---- knee primers (isometric, one per session, rotated angle) ---- */
+  spanish:{name:'Spanish Squat / Wall Sit (isometric)',metric:'time',sets:4,tag:'knee',
+    targets:'Patellar tendon (loading), VMO, quads, glutes',rest:'30–45 sec between holds',
+    tempo:'Hold at ~90° knee angle, still and braced',
+    cue:'Band behind knees or back to wall, shin roughly vertical, push steadily — no bouncing.',
+    goal:'Frontline HSR treatment for your jumper\'s knee — isometric holds have an analgesic effect for ~45 min and prime the tendon for the session. Your knee sitting at ~1/10 says this is working.',
+    progress:'You were at 40 sec. Rebuild to 40, then add 5 sec per block; later add a light band or vest. Keep pain ≤3/10.',
+    seed:'aha3o'},
+  wallsit:{name:'Heavy Wall Sit (weighted isometric)',metric:'timewt',sets:4,tag:'knee',
+    targets:'Patellar tendon (compressive load), quads, VMO, glutes',rest:'30 sec',
+    tempo:'45-sec hold, plate on the quads',
+    cue:'Knees ~90°, back flat on wall, weight plate resting on thighs. Breathe.',
+    goal:'Alternate isometric angle to the Spanish squat. The added plate raises compressive load — the exact mechanism of HSR tendon adaptation. You worked up to +30 lb.',
+    progress:'Restart around +20–25 lb, rebuild to +30, then +35 or 60-sec holds.',
+    seed:'88gwk'},
+  sissy:{name:'Sissy / Decline Squat hold (isometric)',metric:'time',sets:4,tag:'knee',
+    targets:'Patellar tendon (high knee-angle load), rectus femoris, VMO',rest:'30 sec',
+    tempo:'30–40 sec hold at the bottom',
+    cue:'Hold a rail for balance, lean back through the knees. Loads the tendon at a higher angle than the Spanish squat.',
+    goal:'Covers the mid-tendon at a steeper knee angle — rotating the angle across sessions gives full tendon coverage. You held 30 sec cleanly at 1–2/10 pain.',
+    progress:'Rebuild to 30 sec, add 5 sec per block only while pain stays 0–2/10. A 25° decline board is the clinical progression.',
+    seed:'v5pfu'},
+  /* ---- A: hinge focus ---- */
+  rdl:{name:'Romanian Deadlift',metric:'wr',sets:4,tag:'pull',
+    targets:'Hamstrings, glutes; erectors + lats bracing',rest:'90 sec',tempo:'3s lower, 1s pause at stretch, 2s up',
+    cue:'Hinge like closing a door with your hips, bar close to legs, flat back, ~15° knee bend.',
+    goal:'Core posterior-chain movement — counters glute shutdown from driving and builds the hip-hinge endurance your production-floor shifts demand. Knee-friendly.',
+    progress:'You held 85 lb for 4×8. After the break, restart ~65–75 and earn 85 back over 1–2 sessions, then add 5 lb when all 4×8 are clean.',
+    seed:'wi2ge',compositeChart:true},
+  pulldown:{name:'Lat Pulldown (wide) / Assisted Pull-up',metric:'wr',sets:4,tag:'pull',
+    targets:'Lats, teres major, biceps, rear delts',rest:'75 sec',tempo:'2s pull, 1s hold at chest, 3s return',
+    cue:'Full scapular depression + retraction at the bottom — drive elbows down, not a bicep curl.',
+    goal:'Vertical pull for upright-posture endurance under fatigue. Part of the more-pulling-than-pushing bias that offsets all-day driving.',
+    progress:'You worked around 90–100 lb for 3–4×10. Add 5 lb when all sets hit cleanly.',
+    seed:'06f51'},
+  bench:{name:'Dumbbell Bench Press',metric:'wr',sets:4,tag:'push',
+    targets:'Pecs, anterior delts, triceps',rest:'75 sec',tempo:'3s lower, 1s at chest, 2s press',
+    cue:'Shoulder blades back and down, wrists over elbows, controlled bottom.',
+    goal:'Balanced push kept to ~1 push per 2 pulls to preserve the posterior bias. Your main horizontal press.',
+    progress:'You hit 35 lb/hand for 4×10. Rebuild to 30, then back to 35, then +2.5–5 lb per DB.',
+    seed:'w2vqh'},
+  row:{name:'Seated Cable Row (neutral)',metric:'wr',sets:4,tag:'pull',
+    targets:'Mid traps, rhomboids, lats; rear delts, biceps',rest:'75 sec',tempo:'2s pull, 1s squeeze, 3s slow return',
+    cue:'Chest tall, pull to the navel, squeeze shoulder blades — don\'t round forward.',
+    goal:'Horizontal pull that directly counteracts rounded-shoulder driving posture. The 3s eccentric is the priority over load.',
+    progress:'You reached ~60–70 lb for 4×10. Add 5 lb only once the slow return is controlled on every rep.',
+    seed:'lyvib'},
   plank:{name:'Plank',metric:'time',sets:3,tag:'core',
-    targets:'Transverse abdominis, deep core, shoulders',rest:'45–60 sec',tempo:'Hold, breathe steadily',
-    cue:'Forearms down, ribs tucked, squeeze glutes, straight line ear-to-heel. No sagging hips.',
-    goal:'Builds the deep bracing core you found weak — this is the part that protects your back and underlies a visible six-pack, not surface crunches.',
-    progress:'Add 5–10 sec when you can hold the full time with no sag. Past ~60 sec, progress to weighted or long-lever planks instead of just adding minutes.'},
-  deadbug:{name:'Dead bug',metric:'side',sets:3,tag:'core',
-    targets:'Deep core, anti-extension control',rest:'45 sec',tempo:'Slow — extend over 3 sec, control back',
-    cue:'Low back pressed flat to floor the whole time. Opposite arm + leg reach, don\'t let the back arch.',
-    goal:'The "crunch you couldn\'t do," done right. Trains the deep core that a crunch skips — keeping the low back flat is the whole point.',
-    progress:'Add reps per side, then slow the tempo, then add a light weight or band. Keep low back glued down before progressing.'},
-  splitsq:{name:'Split squat / step-up',metric:'leg',sets:3,tag:'knee',
-    targets:'Quads, glutes, single-leg stability',rest:'60–90 sec per leg',tempo:'Controlled down, no knee collapse',
-    cue:'Most weight through the front heel, torso tall, back knee toward floor. Knee tracks over toes.',
-    goal:'Single-leg strength fixes the left/right imbalance feeding your tendon issue and makes walking/standing at work less provocative.',
-    progress:'Bodyweight → goblet hold → heavier. Add reps per leg first; keep it controlled, this is about quality not load.'},
-  pull:{name:'Pull-up (assisted ok) / lat pulldown',metric:'wr',sets:3,tag:'pull',
-    targets:'Lats, mid-back, biceps',rest:'90–120 sec',tempo:'Pull controlled, 2-sec lower',
-    cue:'Start from a full hang/stretch, drive elbows down to your ribs, chest to bar. No kipping.',
-    goal:'Your main vertical pull — balances all the pressing so your shoulders stay healthy. Log assist-weight (less assist = progress) or pulldown load.',
-    progress:'On assisted machine, reduce assistance over time. On pulldown, add load. Aim to add a rep before changing the setting.'},
-  ohp:{name:'Overhead press',metric:'wr',sets:3,tag:'push',
-    targets:'Shoulders, triceps, upper chest, core',rest:'90–120 sec',tempo:'Press up controlled, lower with control',
-    cue:'Brace abs and glutes, ribs down, press the bar/dumbbells to overhead, head "through the window" at top.',
-    goal:'Full-body pressing strength and shoulder health; the bracing also reinforces the core that supports your back.',
-    progress:'Smallest jumps work best here (shoulders progress slowly). Add a rep, then +2.5 lb per side.'},
-  hkr:{name:'Hanging knee raise / cable crunch',metric:'reps',sets:3,tag:'core',
-    targets:'Lower abs, hip flexors, grip',rest:'60 sec',tempo:'Lift controlled, no swinging',
-    cue:'Curl the pelvis up (don\'t just lift the legs), control the lower. If hanging strains grip, use cable crunch.',
-    goal:'Loaded core flexion to round out the deep-core work — builds the visible abdominal strength toward your look goal.',
-    progress:'Add reps → progress knee raise toward straighter legs, or add load on the cable crunch.'},
-  pallof:{name:'Pallof press / side plank',metric:'side',sets:3,tag:'core',
-    targets:'Obliques, anti-rotation core',rest:'45–60 sec',tempo:'Press out 2 sec, hold 1, return slow',
-    cue:'Band/cable at chest, press straight out and resist the pull rotating you. Stay square.',
-    goal:'Anti-rotation is the core quality almost everyone skips — it\'s what truly stabilizes the spine for your job and protects the back.',
-    progress:'Step further from the anchor or add band tension. For side plank, add hold time per side.'}
+    targets:'Deep core (transverse abdominis), shoulders',rest:'45–60 sec',tempo:'Hold, breathe steadily',
+    cue:'Forearms down, ribs tucked, squeeze glutes, straight line ear-to-heel.',
+    goal:'Deep bracing core that protects the spine your job strains and underlies visible abs.',
+    progress:'Add 5–10 sec when you can hold with no hip sag; past ~60 sec add a long lever or light plate.'},
+  /* ---- B: glute / knee focus ---- */
+  hipthrust:{name:'Hip Thrust',metric:'wr',sets:4,tag:'pull',
+    targets:'Glutes (max); hamstrings, core brace',rest:'90 sec',tempo:'2s up, 2s squeeze at top, 2s down',
+    cue:'Drive through heels, ribs down, 2-sec squeeze at the top — that pause is where the adaptation is. Zero knee shear.',
+    goal:'Best glute-activation lift to reverse the "gluteal amnesia" from prolonged sitting, and completely knee-safe for the tendon. Your standout lift — you jumped 90→135.',
+    progress:'You hit 135 for reps. Rebuild ~115, back to 135, then +10 lb per block. Never skip the 2-sec squeeze.',
+    seed:'1lalp',compositeChart:true},
+  legcurl:{name:'Seated Leg Curl',metric:'wr',sets:4,tag:'knee',
+    targets:'Hamstrings (biceps femoris, semimembranosus); calves',rest:'90 sec',tempo:'2s curl, 1s peak, 3s eccentric',
+    cue:'Seated (hip at 90°) loads the distal hamstring. Control the 3s return — that\'s where remodeling happens.',
+    goal:'Strong hamstrings act as functional support for the patellar tendon — a key knee-stability piece. HSR tempo applies.',
+    progress:'You reached 60 lb for 4×10. Add 5 lb only without sacrificing the 3s eccentric.',
+    seed:'575mf'},
+  ohp:{name:'Dumbbell Overhead Press',metric:'wr',sets:3,tag:'push',
+    targets:'Medial + anterior delts; triceps, core stability',rest:'75 sec',tempo:'2s press, 1s top, 3s lower',
+    cue:'Standing, brace core + glutes hard — this trains the postural bracing your standing shifts need.',
+    goal:'The only real overhead push; standing version doubles as spinal-erector endurance work. Drop to seated if the low back fatigues.',
+    progress:'You were at 20–25 lb/hand. Rebuild to 20, then +2.5 lb per DB per block.',
+    seed:'13goy'},
+  facepull:{name:'Cable Face Pull',metric:'wr',sets:4,tag:'pull',
+    targets:'Rear delts, external rotators; mid/lower traps',rest:'75 sec',tempo:'Pull to forehead, 2s hold at peak',
+    cue:'Elbows high, light weight, squeeze the rear delts. Quality of external rotation is the metric, not load.',
+    goal:'Counteracts forward-head, internally-rotated driving posture — critical for shoulder health under fatigue.',
+    progress:'Keep it light (you used ~20–30 lb). Progress by adding a rep, not weight.',
+    seed:'el6wc'},
+  deadbug:{name:'Dead Bug',metric:'side',sets:3,tag:'core',
+    targets:'Deep core, anti-extension control',rest:'45 sec',tempo:'Extend over 3s, control back',
+    cue:'Low back pressed flat the whole time — opposite arm + leg reach without the back arching.',
+    goal:'Trains the deep anti-extension core a crunch skips; keeps the low back flat and protected.',
+    progress:'Add reps per side, then slow tempo, then a light weight/band.'},
+  /* ---- C: heavy / erector focus ---- */
+  trapbar:{name:'Trap Bar Deadlift',metric:'wr',sets:4,tag:'pull',
+    targets:'Erectors, glutes, hamstrings; traps, lats, quads',rest:'2 min',tempo:'3s lower, 1s pause, 2s drive',
+    cue:'Warm up in steps (5@40%, 3@60%, 1@80%). Trap bar reduces lumbar shear vs a straight bar.',
+    goal:'Heaviest movement of the week — builds the spinal-erector endurance for long shifts. Prioritize overload here most of all.',
+    progress:'You were at 95 for 4×6. Rebuild ~75–85, back to 95, then +5 lb every 1–2 weeks. Low reps, so chase load here.',
+    seed:'0mqs8',compositeChart:true},
+  legpress:{name:'Leg Press (feet high & wide)',metric:'wr',sets:3,tag:'knee',
+    targets:'Glutes, hamstrings; quads at safe ROM',rest:'90 sec',tempo:'4s lower, 1s pause, 2s press',
+    cue:'High foot placement shifts load off the tendon. Do NOT lock out — stop ~20° short of full extension.',
+    goal:'HSR for the patellar tendon in a controlled, knee-safe machine. The 4-sec eccentric is the point. Keep knee pain <3/10.',
+    progress:'You reached 120 for 3×12. Rebuild ~100, back to 120, then +10 lb per block.',
+    seed:'pghuz'},
+  row2:{name:'Barbell / Pendlay Row',metric:'wr',sets:4,tag:'pull',
+    targets:'Lower + mid traps, rhomboids, rear delts; erectors (isometric), biceps',rest:'90 sec',tempo:'1s pull, 1s squeeze, 3s lower',
+    cue:'Torso near parallel — the hinge hold trains erectors isometrically, exactly like leaning over a workstation.',
+    goal:'Heavy horizontal pull that doubles as erector endurance. Control the 3s lower; if you can\'t, lighten.',
+    progress:'You worked up to ~75 lb for 4×10. Add 5 lb when the eccentric stays controlled.',
+    seed:'yxv0x'},
+  pallof:{name:'Pallof Press / Side Plank',metric:'side',sets:3,tag:'core',
+    targets:'Obliques, anti-rotation core',rest:'45–60 sec',tempo:'Press out 2s, hold 1s, return slow',
+    cue:'Band/cable at chest, press straight out and resist being rotated. Stay square.',
+    goal:'Anti-rotation — the core quality most people skip — is what truly stabilizes the spine for your job.',
+    progress:'Step further from the anchor or add tension; for side plank add hold time per side.'}
 };
-const PROG={A:['gsq','bench','rdl','plank','deadbug'], B:['splitsq','pull','ohp','hkr','pallof']};
+/* 3-slot rotation. Each session: 1 knee primer + posterior-biased compounds + core. */
+const PROG={
+  A:['spanish','rdl','pulldown','bench','row','plank'],
+  B:['wallsit','hipthrust','legcurl','ohp','facepull','deadbug'],
+  C:['sissy','trapbar','legpress','row2','pallof']
+};
+const ORDER=['A','B','C'];
 
 /* =========================================================
    PHASE LOGIC (Q1: exercises constant, prescription shifts)
    ========================================================= */
 function weekNo(){return Math.floor((new Date(todayStr())-new Date(S.start))/6048e5)+1;}
 function isDeload(){return weekNo()%4===0;}
+function lastCompletedDate(){
+  const ds=Object.keys(S.log).filter(d=>S.log[d].sessionDone).sort();
+  return ds.length?ds[ds.length-1]:null;
+}
+function daysSinceLast(){
+  const last=lastCompletedDate()||SEED_DATE; // fall back to your last real session
+  return Math.floor((new Date(todayStr())-new Date(last))/864e5);
+}
+function inReboot(){return daysSinceLast()>=10;} // 10+ days off → ease back in
 function phase(){const w=weekNo();
-  if(w<=4)return{n:1,name:'Foundation',reps:'8–12',focus:'Learn the movements and tempo. Higher reps, moderate load. Lock the habit.'};
+  if(inReboot())return{n:0,name:'Reboot',reps:'8–10',focus:'Coming back from a break. First 1–2 sessions at ~85% of your old weights, full tempo, then resume.'};
   if(w<=12)return{n:2,name:'Build',reps:'6–8',focus:'Heavier, lower reps. Progressive overload in earnest.'};
   return{n:3,name:'Reveal',reps:'6–10',focus:'Hold strength through the mild deficit while definition appears.'};}
 
@@ -274,13 +374,14 @@ function renderToday(){
   const w=weekNo(), ph=phase(), d=day(), C=295.3, frac=Math.min(w/24,1);
   document.getElementById('dateChip').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   let title,sub;
-  if(isDeload()){title='Deload week';sub='Drop to ~60% volume. Keep the habit and the knee holds going — this is the part that prevents burnout.';}
+  if(inReboot()){title='Welcome back';sub=`It's been ${daysSinceLast()} days. Your knee held at ~1/10 before — ease in at about 85% of your old weights this session, full tempo, and you'll be back to your June numbers within a session or two.`;}
+  else if(isDeload()){title='Deload week';sub='Drop to ~60% volume. Keep the habit and the knee holds going — this is the part that prevents burnout.';}
   else if(d.sessionDone){title='Session done ✓';sub='Recovery — protein, water, 8 hrs sleep — is where the muscle actually rebuilds.';}
-  else {title="Today's a training day";sub='Full-body. Knee rehab first, then beat last week by a hair.';}
+  else {title="Today's a training day";sub='Full-body, posterior-chain biased. Knee primer first, then earn back a little each set.';}
   let dots='';for(let i=13;i>=0;i--){const dt=new Date();dt.setDate(dt.getDate()-i);const e=S.log[dt.toISOString().slice(0,10)];dots+=`<div class="dot${e&&e.sessionDone?' done':''}"></div>`;}
   document.getElementById('v-today').innerHTML=`
    <div class="card">
-     <div class="eyebrow">Phase ${ph.n} · ${ph.name}</div>
+     <div class="eyebrow">${ph.n===0?'Restart':'Phase '+ph.n} · ${ph.name}</div>
      <div class="dial-wrap" style="margin-top:12px">
        <div class="dial"><svg width="108" height="108">
          <circle cx="54" cy="54" r="47" stroke="#2f3a28" stroke-width="9" fill="none"/>
@@ -292,7 +393,7 @@ function renderToday(){
      </div>
    </div>
    <div class="card card-tight"><div class="row between">
-     <div><div class="eyebrow">This week</div><div class="tiny dim" style="margin-top:3px">3 sessions · target reps ${ph.reps} · deload every 4th wk</div></div>
+     <div><div class="eyebrow">This week</div><div class="tiny dim" style="margin-top:3px">A/B/C rotation · next up: Session ${S.curDay} · target reps ${ph.reps}</div></div>
      <div class="dots">${dots}</div></div></div>
    <button class="btn" onclick="go('train')" style="margin-top:4px">Start today's session →</button>
    <div class="split2" style="margin-top:10px">
@@ -326,6 +427,7 @@ function pickDay(dd){S.curDay=dd;day().day=dd;save();renderTrain();}
 function lastEntry(exId){const h=S.sets[exId];if(!h)return null;const ds=Object.keys(h).filter(d=>d!==todayStr()).sort();if(!ds.length)return null;return{date:ds[ds.length-1],sets:h[ds[ds.length-1]]};}
 function fmtSet(s,metric){
   if(metric==='wr')return (s.w||s.w===0?s.w:'–')+(s.w!==undefined&&s.w!==''?' lb':'')+' × '+(s.r??'–');
+  if(metric==='timewt')return (s.t??'–')+' sec'+(s.w?' +'+s.w+'lb':'');
   if(metric==='reps')return (s.r??'–')+' reps';
   if(metric==='time')return (s.t??'–')+' sec';
   if(metric==='side')return (s.r??'–')+' /side';
@@ -334,35 +436,38 @@ function fmtSet(s,metric){
 }
 function progNudge(exId,metric){
   const last=lastEntry(exId);if(!last)return 'First time — log your sets and Steady remembers them for next session.';
-  const ph=phase();
-  if(metric==='wr'){
-    const reps=last.sets.map(s=>+s.r||0), top=Math.max(...reps), allHigh=reps.every(r=>r>=8);
-    if(allHigh)return 'You hit the rep range last time — add ~2.5–5 lb this session.';
-    return 'Match or beat last time: aim to add a rep on each set before adding weight.';
+  if(inReboot()){
+    if(metric==='wr'){const best=Math.max(...last.sets.map(s=>+s.w||0));return `Back from a break — start around ${Math.round(best*0.85/2.5)*2.5} lb (~85% of your ${best}) and build back up.`;}
+    if(metric==='time'){const best=Math.max(...last.sets.map(s=>+s.t||0));return `Ease in — aim ~${Math.round(best*0.85)} sec (about 85% of your ${best}), rebuild from there.`;}
+    const best=Math.max(...last.sets.map(s=>+s.r||0));return `Ease back — a few reps short of your ${best} is right for the first session back.`;
   }
-  if(metric==='time'){const best=Math.max(...last.sets.map(s=>+s.t||0));return `Last best hold: ${best} sec. Add 5–10 sec if it felt solid.`;}
+  if(metric==='wr'){
+    const reps=last.sets.map(s=>+s.r||0), allHigh=reps.every(r=>r>=8);
+    if(allHigh)return 'You hit the rep range last time — add ~2.5–5 lb this session.';
+    return 'Match or beat last time: add a rep on each set before adding weight.';
+  }
+  if(metric==='time'||metric==='timewt'){const best=Math.max(...last.sets.map(s=>+s.t||0));return `Last best hold: ${best} sec. Add 5–10 sec if it felt solid.`;}
   const best=Math.max(...last.sets.map(s=>+s.r||0));return `Last best: ${best}. Add a rep where you can keep good form.`;
 }
 function renderTrain(){
-  const dd=S.curDay, ph=phase();
+  const dd=S.curDay, ph=phase(), ids=PROG[dd];
   let cards='';
-  // iso primer first (always)
-  cards+=exCard('iso',true);
-  PROG[dd].forEach(id=>cards+=exCard(id,false));
+  ids.forEach((id,i)=>cards+=exCard(id, i===0 && EX[id].tag==='knee'));
+  const rebootNote=inReboot()?`<div class="verdict watch" style="margin-top:0;margin-bottom:12px">Coming back after ${daysSinceLast()} days. Each lift below shows a suggested ~85% restart weight from your real history. Full tempo, keep knee pain ≤3/10 — you'll be back to your June numbers fast.</div>`:'';
   document.getElementById('v-train').innerHTML=`
    <div class="card card-tight"><div class="row between">
-     <div><div class="eyebrow">Today · Phase ${ph.n} target ${ph.reps} reps</div>
-       <h2 class="display" style="font-size:1.2rem;margin-top:3px">Workout ${dd}</h2></div>
+     <div><div class="eyebrow">${ph.n===0?'Restart':'Phase '+ph.n} · ${sessionLabel(dd)}</div>
+       <h2 class="display" style="font-size:1.2rem;margin-top:3px">Session ${dd}</h2></div>
      <div class="seg" style="width:auto">
-       <button class="${dd==='A'?'on':''}" onclick="pickDay('A')">A</button>
-       <button class="${dd==='B'?'on':''}" onclick="pickDay('B')">B</button></div>
+       ${ORDER.map(x=>`<button class="${dd===x?'on':''}" onclick="pickDay('${x}')">${x}</button>`).join('')}</div>
    </div></div>
+   ${rebootNote}
    ${cards}
    <button class="btn" onclick="finishSession()">Mark session complete ✓</button>
-   <p class="tiny faint" style="text-align:center;margin:12px 0 0">Numbers save as you type. Tap <b>Coaching</b> on any move for form, rest, and how to advance.</p>`;
-  // hydrate inputs
-  ['iso',...PROG[dd]].forEach(id=>hydrate(id));
+   <p class="tiny faint" style="text-align:center;margin:12px 0 0">Numbers save as you type. Tap <b>Coaching</b> on any move for form, rest, and how to advance. A/B/C rotates — a missed day never zeroes out a movement.</p>`;
+  ids.forEach(id=>hydrate(id));
 }
+function sessionLabel(dd){return {A:'Hinge + pulls',B:'Glutes + knee',C:'Heavy + erectors'}[dd]||'';}
 function exCard(id,isIso){
   const ex=EX[id], badge=ex.tag?`<span class="badge ${ex.tag}">${ex.tag==='knee'?'knee-safe':ex.tag}</span>`:'';
   const last=lastEntry(id);
@@ -373,7 +478,7 @@ function exCard(id,isIso){
   const unit={wr:'',time:'sec',reps:'reps',side:'/side',leg:'/leg'}[ex.metric];
   return `<div class="card${isIso?'':''}"${isIso?' style="border-color:rgba(217,138,85,.4)"':''}>
     <div class="row between"><div class="row" style="gap:8px"><h3 style="font-size:1rem">${ex.name}</h3></div>${badge}</div>
-    <div class="meta" style="margin-top:3px">${isIso?'Rehab first · ':''}${ex.metric==='wr'?'Log weight × reps':ex.metric==='time'?'Log hold time':ex.metric==='side'?'Log reps per side':ex.metric==='leg'?'Log reps per leg':'Log reps'} · ${ex.sets} sets · rest ${ex.rest}</div>
+    <div class="meta" style="margin-top:3px">${isIso?'Knee primer · ':''}${ex.metric==='wr'?'Log weight × reps':ex.metric==='time'?'Log hold time':ex.metric==='timewt'?'Log hold + plate':ex.metric==='side'?'Log reps per side':ex.metric==='leg'?'Log reps per leg':'Log reps'} · ${ex.sets} sets · rest ${ex.rest}</div>
     <div class="setgrid" id="sets-${id}"></div>
     ${lastHtml}
     <span class="coachtoggle" onclick="toggleCoach('${id}')">Coaching ▾</span>
@@ -398,6 +503,9 @@ function hydrate(id){
     if(ex.metric==='wr'){
       inner+=`<input class="ipt" type="number" inputmode="decimal" placeholder="lb" value="${cur.w??''}" oninput="setVal('${id}',${i},'w',this.value)">
               <input class="ipt" type="number" inputmode="numeric" placeholder="reps" value="${cur.r??''}" oninput="setVal('${id}',${i},'r',this.value)">`;
+    } else if(ex.metric==='timewt'){
+      inner+=`<input class="ipt" type="number" inputmode="numeric" placeholder="sec" value="${cur.t??''}" oninput="setVal('${id}',${i},'t',this.value)"><div class="unit">sec</div>
+              <input class="ipt" type="number" inputmode="decimal" placeholder="+lb" value="${cur.w??''}" oninput="setVal('${id}',${i},'w',this.value)"><div class="unit">lb</div>`;
     } else if(ex.metric==='time'){
       inner+=`<input class="ipt" type="number" inputmode="numeric" placeholder="seconds" value="${cur.t??''}" oninput="setVal('${id}',${i},'t',this.value)"><div class="unit">sec</div>`;
     } else {
@@ -414,7 +522,12 @@ function setVal(id,i,field,val){
   S.sets[id][d][i][field]=val===''?undefined:(+val);
   save();
 }
-function finishSession(){day().sessionDone=true;day().day=S.curDay;save();toast('Session logged ✓');go('today');}
+function finishSession(){
+  day().sessionDone=true;day().day=S.curDay;
+  // advance rotation for next time: A→B→C→A
+  const i=ORDER.indexOf(S.curDay); S.curDay=ORDER[(i+1)%ORDER.length];
+  save();toast('Session logged ✓ — next up: '+S.curDay);go('today');
+}
 
 /* =========================================================
    FOOD — protein hero + gentle sugar awareness + positive habits
@@ -512,6 +625,15 @@ function renderProgress(){
     else if(waT>0){vClass='watch';vText='<b>Waist trending up.</b> Likely a slightly loose week or higher sodium/carbs (water). Tighten the mild deficit and recheck in 1–2 weeks before changing anything.';}
     else {vClass='neutral';vText='<b>Holding steady.</b> No clear trend yet — normal early on. Water retention masks fat loss for the first 2–3 weeks; judge by 4-week trends.';}
   }
+  // external conditioning influences the fat-loss side of the verdict
+  const wk=extWeekMin();
+  if(wk>=90 && (vClass==='watch'&&/waist trending up|Worth a look/i.test(vText)===false)){
+    vText+=` <span style="color:var(--sky)">You've logged ${wk} min of cardio this week — that's actively helping the fat-loss side.</span>`;
+  } else if(wk>=90){
+    vText+=` <span style="color:var(--sky)">${wk} min of cardio this week is supporting your deficit.</span>`;
+  } else if(wk>0 && weights.length>=2){
+    vText+=` <span class="faint">Only ${wk} cardio min this week — a couple of swims or rides would nudge fat loss along.</span>`;
+  }
   // waist-to-height
   let whtr='';
   if(waists.length){const last=waists[waists.length-1];const r=(last/S.height);
@@ -560,7 +682,28 @@ function renderProgress(){
      <button class="btn ghost mini" style="width:100%;margin-top:11px" onclick="logMiles()">Save milestones</button>
    </div>
 
-   <div class="card card-tight"><p class="tiny dim" style="line-height:1.5">Heads-up for the first weeks: new training adds 2–5 lb of water that <b style="color:var(--ink)">masks fat loss</b>. Beginners also gain strength fastest now (10–15% in 3 weeks). Don't read the daily scale — read the 4-week trend.</p></div>`;
+   <div class="card">
+     <div class="eyebrow">Outside the gym</div>
+     <p class="tiny dim" style="margin:7px 0 0">Swimming, pickleball, cycling — this counts. It supports the fat-loss side of recomp and keeps the knee moving. ${extWeekMin()} min logged in the last 7 days.</p>
+     <div class="bar"><i style="width:${Math.min(100,Math.round(extWeekMin()/150*100))}%;background:var(--sky)"></i></div>
+     <p class="tiny faint" style="margin:6px 0 0">~150 min/week of easy cardio is a great target.</p>
+     ${extKneeFlag()}
+     <div class="split3" style="margin-top:12px">
+       <button class="chip" onclick="setExtKind('Swim')" id="ek-Swim">Swim</button>
+       <button class="chip" onclick="setExtKind('Pickleball')" id="ek-Pickleball">Pickleball</button>
+       <button class="chip" onclick="setExtKind('Cycle')" id="ek-Cycle">Cycle</button></div>
+     <div class="split2" style="margin-top:10px">
+       <div><label class="lab">Minutes</label><input class="field" id="exMin" type="number" inputmode="numeric" placeholder="30"></div>
+       <div><label class="lab">Effort</label>
+         <div class="seg" id="exEffort" style="margin-top:6px">
+           <button onclick="setExtEffort('easy')" data-e="easy">Easy</button>
+           <button onclick="setExtEffort('mod')" data-e="mod">Mod</button>
+           <button onclick="setExtEffort('hard')" data-e="hard">Hard</button></div></div></div>
+     <button class="btn ghost mini" style="width:100%;margin-top:11px" onclick="logExt()">Log activity</button>
+     ${extRecentList()}
+   </div>
+
+   <div class="card card-tight"><p class="tiny dim" style="line-height:1.5">Heads-up: new training adds 2–5 lb of water that <b style="color:var(--ink)">masks fat loss</b> for 2–3 weeks. Beginners gain strength fastest early (10–15% in 3 weeks). Read the 4-week trend, not the daily scale.</p></div>`;
 }
 function arrowGlyph(t){return t<0?'↓':t>0?'↑':'→';}
 function logBody(){
@@ -573,6 +716,33 @@ function logBody(){
 function logMiles(){
   const pu=parseInt(document.getElementById('inPu').value), pl=parseInt(document.getElementById('inPl').value);
   if(pu)S.miles.pushup=pu; if(pl)S.miles.plank=pl; save();renderProgress();toast('Milestones saved');
+}
+/* ---- external exercise log ---- */
+let _extKind='Swim', _extEffort='easy';
+function setExtKind(k){_extKind=k;['Swim','Pickleball','Cycle'].forEach(x=>{const b=document.getElementById('ek-'+x);if(b)b.classList.toggle('on',x===k);});}
+function setExtEffort(e){_extEffort=e;const seg=document.getElementById('exEffort');if(seg)[...seg.children].forEach(b=>b.classList.toggle('on',b.dataset.e===e));}
+function logExt(){
+  const min=parseInt(document.getElementById('exMin').value);
+  if(!min||min<=0){toast('Enter minutes');return;}
+  S.ext.push({date:todayStr(),kind:_extKind,min,effort:_extEffort});save();renderProgress();toast(_extKind+' logged');
+}
+function extWeekMin(){
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-7);
+  return S.ext.filter(e=>new Date(e.date)>=cutoff).reduce((a,e)=>a+e.min,0);
+}
+function extKneeFlag(){
+  // knee-aware: recent hard pickleball near a flare gets a gentle note
+  const recent=S.ext.slice(-5);
+  const pick=recent.find(e=>e.kind==='Pickleball'&&e.effort==='hard');
+  if(pick)return `<p class="tiny" style="margin:8px 0 0;color:var(--clay)">Note: hard pickleball involves lateral cutting that can provoke the patellar tendon — warm the knee up first and watch pain the next day.</p>`;
+  const lowImpact=recent.filter(e=>e.kind==='Swim'||e.kind==='Cycle').length;
+  if(lowImpact>=2)return `<p class="tiny" style="margin:8px 0 0;color:var(--moss)">Swimming and cycling are tendon-friendly — great choices for recovery days.</p>`;
+  return '';
+}
+function extRecentList(){
+  if(!S.ext.length)return '';
+  const rows=S.ext.slice(-4).reverse().map(e=>`<div class="milestone"><span>${e.date.slice(5)} · ${e.kind}</span><b>${e.min} min · ${e.effort}</b></div>`).join('');
+  return `<div style="margin-top:12px">${rows}</div>`;
 }
 function strengthVolumeSeries(){
   // sum weight*reps per date across all weight+rep exercises
@@ -605,23 +775,29 @@ function sparkline(vals,color,label){
 function renderPlan(){
   const ph=phase();
   document.getElementById('v-plan').innerHTML=`
-   <div class="card"><div class="eyebrow">The 6-month arc</div>
-     <p class="tiny dim" style="margin:7px 0 0">~12% body fat with real strength. 3 full-body days/week, 4-week blocks (3 build, 1 deload). The <b>movements stay the same</b> — that's by design: you need reps to master the lifts and to track progress. What changes is the prescription.</p>
+   <div class="card"><div class="eyebrow">Your program</div>
+     <p class="tiny dim" style="margin:7px 0 0">Goal: ~12% body fat with real strength. <b style="color:var(--ink)">3-session A/B/C rotation</b>, full-body, posterior-chain biased (more pulling than pushing to counter all-day driving/standing), with a knee primer every session. The rotation is deliberate: if you miss a day, the next session just continues — no muscle group gets zeroed out for the week. Movements stay stable so you master them and can track progress; the <i>weights</i> climb.</p>
      <div style="margin-top:14px">
-       <div class="ex" style="border-top:none"><div class="row between"><h3>Weeks 1–4 · Foundation</h3>${ph.n===1?'<span class="badge core">now</span>':''}</div>
-         <p class="meta" style="margin-top:4px">Reps 8–12. Learn movements + tempo, load the tendon without flares, lock the habit. Strength jumps fast (neural).</p></div>
-       <div class="ex"><div class="row between"><h3>Weeks 5–12 · Build</h3>${ph.n===2?'<span class="badge core">now</span>':''}</div>
-         <p class="meta" style="margin-top:4px">Reps 6–8, heavier. Real progressive overload. Push-ups break 30. Core visibly stronger.</p></div>
-       <div class="ex"><div class="row between"><h3>Weeks 13–24 · Reveal</h3>${ph.n===3?'<span class="badge core">now</span>':''}</div>
-         <p class="meta" style="margin-top:4px">Mild deficit uncovers definition. ~12% with genuine strength. Maybe reintroduce light running once the knee tolerates heavy slow squats.</p></div>
-     </div></div>
+       <div class="ex" style="border-top:none"><div class="row between"><h3>Session A · Hinge + pulls</h3></div>
+         <p class="meta" style="margin-top:4px">Spanish squat primer, RDL, lat pulldown, DB bench, cable row, plank.</p></div>
+       <div class="ex"><div class="row between"><h3>Session B · Glutes + knee</h3></div>
+         <p class="meta" style="margin-top:4px">Weighted wall sit, hip thrust, leg curl, overhead press, face pull, dead bug.</p></div>
+       <div class="ex"><div class="row between"><h3>Session C · Heavy + erectors</h3></div>
+         <p class="meta" style="margin-top:4px">Sissy-squat hold, trap-bar deadlift, leg press, barbell row, Pallof press.</p></div>
+     </div>
+     <p class="tiny faint" style="margin:11px 0 0">Ported from the program you were already running — knee rehab and posterior bias kept, exercise churn trimmed. Your real logged weights are loaded in as each lift's starting reference.</p></div>
 
-   <div class="card"><div class="eyebrow">How progression actually works</div>
-     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6">Hit the top of the rep range with good form on every set → add ~2.5–5% load next session. Can't yet? Repeat and add a rep first. Steady reads your last session and tells you which to do on each exercise. Reps will wobble as you adapt to a new weight — that's why you log <b style="color:var(--ink)">both</b> weight and reps.</p></div>
+   <div class="card"><div class="eyebrow">Where you are right now</div>
+     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6">You trained ~5 weeks (10 sessions) with your knee holding at ~1/10 — the HSR rehab is working. After a 2-week break you're in a short <b style="color:var(--ink)">restart</b>: first 1–2 sessions at ~85% of your old weights, full tempo, then straight back to progression. You were strongest on hip thrust (135) and trap-bar deadlift (95); RDL and rows are ready to climb again.</p></div>
 
-   <div class="card"><div class="eyebrow">Conditioning (low-impact for the knee)</div>
-     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6"><b style="color:var(--ink)">Swim 1–2×/week, 20–30 min</b> — zero impact, great for the 12%. Or <b style="color:var(--ink)">pickleball</b> once a week (warm the knee first; lateral cuts provoke it). Hold off on running. Your walking-heavy job already counts.</p></div>
+   <div class="card"><div class="eyebrow">How progression works</div>
+     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6">Hit the top of the rep range with good form on every set → add ~2.5–5% load next session. Not yet? Add a rep first. Steady reads your last session and tells you which to do per exercise. Reps wobble as you adapt — that's why you log <b style="color:var(--ink)">both</b> weight and reps.</p></div>
 
+   <div class="card"><div class="eyebrow">Conditioning (you do these — log them on Progress)</div>
+     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6"><b style="color:var(--ink)">Swimming and cycling</b> are tendon-friendly and support the fat-loss side of recomp — log them and they feed your progress readout. <b style="color:var(--ink)">Pickleball</b> is great cardio but involves lateral cutting; warm the knee first and watch next-day pain. Aim ~150 min/week total.</p></div>
+
+   <div class="card"><div class="eyebrow">Log body data — it's your blind spot</div>
+     <p class="tiny dim" style="margin:8px 0 0;line-height:1.6">You logged bodyweight twice and waist never, so fat-loss trend is currently invisible. Add a <b style="color:var(--ink)">waist measurement</b> on the Progress tab every 1–2 weeks — combined with weight it tells you whether you're losing fat, gaining muscle, or recomping. That's the single most useful thing you can start doing.</p></div>
    <div class="card"><div class="eyebrow">Grease the groove — push-ups</div>
      <p class="tiny dim" style="margin:8px 0 0;line-height:1.6">On non-gym days, 2–3 sets at ~60% of max (≈12 clean reps) spread through the day. Low fatigue, fast skill gain.</p>
      <button class="btn ghost mini" style="width:100%;margin-top:12px" onclick="grease()">Logged a GtG set ✓ <span class="faint" id="gct">${S.grease.date===todayStr()&&S.grease.n?'· '+S.grease.n+' today':''}</span></button></div>
@@ -687,6 +863,7 @@ function importData(input){
 /* ---------- toast + init ---------- */
 let tT;function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('show'),1600);}
 if(S.grease.date!==todayStr()){S.grease={date:todayStr(),n:0};save();}
+seedHistory();
 renderToday();
 
 /* ---------- service worker (offline app) ---------- */

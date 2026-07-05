@@ -1,6 +1,6 @@
 /* Steady service worker — offline app shell caching.
    Bump CACHE version when you change index.html so phones pull the update. */
-const CACHE = 'steady-v2';
+const CACHE = 'steady-v3';
 const ASSETS = [
   './',
   './index.html',
